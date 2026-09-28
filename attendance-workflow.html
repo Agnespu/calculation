@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>假勤统计自动化工作流 · 交互 Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #09090b;
+    --card: #18181b;
+    --card2: #1f1f23;
+    --border: #27272a;
+    --accent: #10b981;
+    --blue: #3b82f6;
+    --violet: #8b5cf6;
+    --warn: #f59e0b;
+    --err: #ef4444;
+    --text: #e4e4e7;
+    --muted: #a1a1aa;
+    --faint: #71717a;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    font-size: 14px; line-height: 1.6;
+  }
+  .mono { font-family: var(--mono); }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 28px 20px 56px; }
+
+  /* ===== header ===== */
+  header { padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: .5px; }
+  .demo-chip {
+    font-size: 11px; color: var(--accent); border: 1px solid rgba(16,185,129,.35);
+    background: rgba(16,185,129,.08); padding: 2px 8px; border-radius: 999px; letter-spacing: 1px;
+  }
+  .subtitle { margin-top: 6px; font-size: 13px; color: var(--muted); }
+
+  section { margin-top: 34px; }
+  h2 { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; margin-bottom: 14px; flex-wrap: wrap; }
+  .sec-idx { font-size: 12px; color: var(--accent); }
+  h2 .spacer { flex: 1; }
+
+  /* ===== flow diagram ===== */
+  .flow-box { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+  .phase-label {
+    display: inline-block; font-size: 11px; font-family: var(--mono); letter-spacing: 1px;
+    border-radius: 6px; padding: 3px 10px; margin-bottom: 12px;
+  }
+  .phase-pre { color: var(--blue); background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.35); }
+  .phase-post { color: var(--violet); background: rgba(139,92,246,.1); border: 1px solid rgba(139,92,246,.35); }
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .node {
+    background: var(--card2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 12px; font-size: 12.5px; white-space: nowrap;
+  }
+  .node.auto { border-color: rgba(59,130,246,.4); color: #93c5fd; }
+  .node.danger { border-color: rgba(239,68,68,.45); color: #fca5a5; }
+  .node.ok { border-color: rgba(16,185,129,.45); color: #6ee7b7; }
+  .arrow { color: var(--faint); font-family: var(--mono); font-size: 12px; }
+  .flow-rows { display: grid; gap: 12px; }
+  .branch { margin-left: 26px; border-left: 2px solid var(--border); padding-left: 16px; display: grid; gap: 8px; }
+  .branch .b-row { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+  /* ===== control bar ===== */
+  .ctrl {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; display: grid; gap: 14px;
+  }
+  .ctrl-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .ctrl-label { font-size: 12px; color: var(--faint); font-family: var(--mono); letter-spacing: 1px; }
+  .seg { display: inline-flex; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button {
+    background: transparent; border: none; color: var(--muted); padding: 7px 18px;
+    font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  .seg button.on { background: rgba(16,185,129,.14); color: var(--accent); font-weight: 600; }
+  select, input, textarea {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 8px; padding: 7px 10px; font-size: 13px; font-family: inherit;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  .scope-note { font-size: 12px; color: var(--muted); }
+  .scope-note b { color: var(--accent); font-weight: 600; }
+  .sim-box { border-top: 1px dashed var(--border); padding-top: 12px; }
+  .sim-hint { font-size: 12px; color: var(--faint); }
+
+  .btn {
+    border: 1px solid var(--border); background: var(--card2); color: var(--text);
+    border-radius: 7px; padding: 6px 12px; font-size: 12.5px; cursor: pointer; font-family: inherit;
+    transition: opacity .15s;
+  }
+  .btn:hover { opacity: .85; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #04130d; font-weight: 600; }
+  .btn.blue { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .btn.danger { border-color: rgba(239,68,68,.5); color: #fca5a5; }
+  .btn.warn { border-color: rgba(245,158,11,.5); color: #fcd34d; }
+  .btn.mini { padding: 3px 9px; font-size: 11.5px; border-radius: 6px; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ===== metrics ===== */
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .metric { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .metric-value { font-size: 24px; font-weight: 700; }
+  .metric-label { margin-top: 2px; font-size: 12px; color: var(--muted); }
+
+  /* ===== notification feed ===== */
+  .feed {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    height: 240px; overflow-y: auto; padding: 8px 6px;
+  }
+  .feed-item { display: grid; grid-template-columns: 58px 1fr; gap: 10px; padding: 9px 12px; border-bottom: 1px solid rgba(39,39,42,.6); }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-time { font-size: 11px; color: var(--faint); font-family: var(--mono); padding-top: 2px; }
+  .feed-tag {
+    display: inline-block; font-size: 10.5px; font-family: var(--mono); border-radius: 4px;
+    padding: 0 6px; margin-right: 8px; vertical-align: 1px;
+  }
+  .t-sys { color: #93c5fd; background: rgba(59,130,246,.12); }
+  .t-approve { color: #6ee7b7; background: rgba(16,185,129,.12); }
+  .t-remind { color: #fcd34d; background: rgba(245,158,11,.12); }
+  .t-ai { color: #c4b5fd; background: rgba(139,92,246,.14); }
+  .t-hr { color: #fca5a5; background: rgba(239,68,68,.12); }
+  .feed-text { font-size: 12.5px; color: var(--text); }
+  .feed-empty { text-align: center; color: var(--faint); font-size: 12px; padding: 30px 0; }
+  .feed-count {
+    font-size: 11px; font-family: var(--mono); color: var(--warn);
+    background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.35);
+    border-radius: 999px; padding: 1px 8px;
+  }
+
+  /* ===== register form ===== */
+  .reg-form {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 18px; display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end;
+  }
+  .reg-form label { display: grid; gap: 4px; font-size: 11.5px; color: var(--faint); }
+  .reg-form label.wide { flex: 1; min-width: 200px; }
+
+  /* ===== board ===== */
+  .board {
+    display: grid; grid-template-columns: repeat(6, minmax(210px, 1fr));
+    gap: 12px; overflow-x: auto; padding-bottom: 6px;
+  }
+  .col-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .col-head .name { font-size: 12.5px; font-weight: 600; }
+  .count { font-size: 11px; color: var(--muted); background: var(--card); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+  .col-cards { display: flex; flex-direction: column; gap: 9px; min-height: 60px; }
+  .empty { font-size: 12px; color: var(--faint); border: 1px dashed var(--border); border-radius: 9px; padding: 14px 8px; text-align: center; }
+
+  .emp-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-left: 3px solid var(--border); border-radius: 9px; padding: 10px 12px;
+  }
+  .emp-card.lv-warn { border-left-color: var(--warn); }
+  .emp-card.lv-review { border-left-color: var(--err); }
+  .emp-card.is-done { opacity: .75; }
+  .card-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .card-top .emp { font-size: 13.5px; font-weight: 600; }
+  .rid { font-size: 10.5px; color: var(--faint); font-family: var(--mono); }
+  .card-line { margin-top: 5px; font-size: 11.5px; color: var(--muted); }
+  .card-log { margin-top: 7px; padding-top: 7px; border-top: 1px dashed var(--border); font-size: 11px; color: var(--faint); }
+  .card-actions { margin-top: 9px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .wait-tag { color: var(--muted); font-size: 11.5px; }
+  .urgent-tag {
+    font-size: 10.5px; font-family: var(--mono); color: var(--err);
+    background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.35);
+    border-radius: 999px; padding: 0 7px;
+  }
+
+  .chip { font-size: 10.5px; font-family: var(--mono); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+  .chip.online { color: var(--accent); background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.3); }
+  .chip.offline { color: var(--muted); background: rgba(113,113,122,.12); border: 1px solid var(--border); }
+  .chip.holiday { color: #fca5a5; background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); }
+  .chip.weekend { color: #93c5fd; background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.3); }
+
+  .st-chip { display: inline-block; font-size: 10.5px; font-family: var(--mono); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+  .st-pending { color: var(--muted); background: rgba(113,113,122,.12); border: 1px solid var(--border); }
+  .st-reject { color: var(--err); background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.35); }
+  .st-wait { color: var(--warn); background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.3); }
+  .st-pass { color: var(--accent); background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.3); }
+  .st-err { color: var(--err); background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.35); }
+  .st-done { color: var(--blue); background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.3); }
+
+  .c-pass { color: var(--accent); }
+  .c-warn { color: var(--warn); }
+  .c-review, .c-err { color: var(--err); }
+  .c-muted { color: var(--faint); }
+
+  /* ===== table ===== */
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+  table { width: 100%; border-collapse: collapse; min-width: 920px; }
+  th, td { padding: 9px 13px; text-align: left; white-space: nowrap; }
+  th {
+    font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 1px;
+    color: var(--muted); border-bottom: 1px solid var(--border); background: rgba(39,39,42,.4);
+  }
+  td { font-size: 12.5px; border-bottom: 1px solid rgba(39,39,42,.6); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.row-review { background: rgba(239,68,68,.05); }
+  tbody tr.row-warn { background: rgba(245,158,11,.04); }
+  th.num, td.num { text-align: right; }
+
+  /* ===== rules ===== */
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+  .rule-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
+  .rule-card h3 { font-size: 13.5px; font-weight: 700; margin-bottom: 10px; display: flex; gap: 8px; align-items: center; }
+  .rule-card .rc-idx { font-size: 11px; font-family: var(--mono); color: var(--accent); }
+  .rule-card ul { list-style: none; display: grid; gap: 7px; }
+  .rule-card li { font-size: 12px; color: var(--muted); padding-left: 14px; position: relative; }
+  .rule-card li::before { content: ""; position: absolute; left: 0; top: 8px; width: 5px; height: 5px; border-radius: 50%; background: var(--faint); }
+  .rule-card li b { color: var(--text); font-weight: 600; }
+  .rule-card .mono { color: var(--muted); }
+
+  /* ===== modal ===== */
+  .modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,.65);
+    display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px;
+  }
+  .modal-mask[hidden] { display: none; }
+  .modal {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    width: 100%; max-width: 460px; padding: 22px 24px;
+  }
+  .m-title { font-size: 16px; font-weight: 700; }
+  .m-sub { margin: 6px 0 16px; font-size: 12px; color: var(--muted); }
+  .modal label { display: grid; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+  .modal .radio-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .modal .radio-row label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text); margin: 0; }
+  .m-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
+
+  footer { margin-top: 44px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--faint); text-align: center; }
+
+  @media (max-width: 900px) {
+    .board { grid-template-columns: repeat(2, minmax(240px, 1fr)); }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding: 20px 14px 40px; }
+    .board { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="title-row">
+      <h1>假勤统计自动化工作流</h1>
+      <span class="demo-chip mono">INTERACTIVE DEMO</span>
+    </div>
+    <p class="subtitle">数据字典 + 状态机 + AI 辅助核验 · HR 高并发流程治理 · 500+ 人规模 · 数据为脱敏示意</p>
+  </header>
+
+  <!-- ① 流程总览 -->
+  <section>
+    <h2><span class="sec-idx mono">01</span>工作流全景 · 两阶段状态机</h2>
+    <div class="flow-box">
+      <div class="flow-rows">
+        <div>
+          <span class="phase-label phase-pre">节前阶段 · 登记与审批</span>
+          <div class="flow">
+            <span class="node">员工加班登记<br><small style="color:var(--faint)">仅见本人数据</small></span>
+            <span class="arrow">→</span>
+            <span class="node auto">自动推送部门负责人审批</span>
+            <span class="arrow">→</span>
+            <span class="node">负责人审批<br><small style="color:var(--faint)">通过 / 驳回重填</small></span>
+            <span class="arrow">→</span>
+            <span class="node ok">预估时长锁定（口径基线）</span>
+          </div>
+        </div>
+        <div>
+          <span class="phase-label phase-post">节后阶段 · 报告 · AI核验 · 终审</span>
+          <div class="flow">
+            <span class="node auto">节后 D+1 自动触发报告提醒</span>
+            <span class="arrow">→</span>
+            <span class="node">员工加班报告（实报时长 + 产出）</span>
+            <span class="arrow">→</span>
+            <span class="node" style="border-color:rgba(139,92,246,.45);color:#c4b5fd">AI 时长比对核验</span>
+            <span class="arrow">→</span>
+            <span class="node ok">差异 &lt; 20% 自动通过</span>
+            <span class="arrow">→</span>
+            <span class="node">HR 终审</span>
+            <span class="arrow">→</span>
+            <span class="node ok">导出薪酬核算表</span>
+          </div>
+          <div class="branch">
+            <div class="b-row">└─ <span style="color:var(--warn)">差异 20%–50%：标黄预警</span> ─┐</div>
+            <div class="b-row">└─ <span style="color:var(--err)">差异 ≥ 50%：强制复核，不可绕过</span> ─┴─→ <span style="color:#fca5a5">异常预警池 → 人工复核（采纳实报/预估/自定义）→ 回到 HR 终审</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ② 模拟控制台 -->
+  <section>
+    <h2><span class="sec-idx mono">02</span>模拟控制台</h2>
+    <div class="ctrl">
+      <div class="ctrl-row">
+        <span class="ctrl-label">当前角色</span>
+        <div class="seg" id="roleSeg">
+          <button data-role="employee" class="on">员工</button>
+          <button data-role="manager">部门负责人</button>
+          <button data-role="hr">HR</button>
+        </div>
+        <select id="empSel"></select>
+        <select id="mgrSel" hidden></select>
+        <span class="scope-note" id="scopeNote"></span>
+      </div>
+      <div class="sim-box">
+        <div class="ctrl-row">
+          <span class="ctrl-label">自动化触发</span>
+          <button class="btn mini" onclick="simPreRemind()">模拟 · 节前 T-2 审批催办</button>
+          <button class="btn mini warn" onclick="simReportRemind(1)">模拟 · 节后 D+1 报告提醒</button>
+          <button class="btn mini warn" onclick="simReportRemind(2)">模拟 · D+2 二次催办（抄送负责人）</button>
+          <button class="btn mini danger" onclick="simReportRemind(3)">模拟 · D+3 超时升级（负责人 + HR）</button>
+          <span class="sim-hint">点击后由「工作流引擎」自动生成通知并更新催办状态</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ 实时指标 -->
+  <section class="metrics">
+    <div class="metric"><div class="metric-value mono" id="mTotal">0</div><div class="metric-label">在途 + 完结记录</div></div>
+    <div class="metric"><div class="metric-value mono" style="color:var(--muted)" id="mPre">0</div><div class="metric-label">节前待审批</div></div>
+    <div class="metric"><div class="metric-value mono c-warn" id="mPost">0</div><div class="metric-label">节后待报告</div></div>
+    <div class="metric"><div class="metric-value mono c-review" id="mExc">0</div><div class="metric-label">异常预警池</div></div>
+    <div class="metric"><div class="metric-value mono" style="color:var(--blue)" id="mDone">0</div><div class="metric-label">HR 已终审</div></div>
+  </section>
+
+  <!-- ④ 通知中心 -->
+  <section>
+    <h2>
+      <span class="sec-idx mono">03</span>通知中心 · 主动触达
+      <span class="feed-count mono" id="feedCount" hidden>0</span>
+      <span class="spacer"></span>
+      <span class="sim-hint">审批提醒 / 分级催办 / AI 预警 / 升级通知按角色与数据权限隔离可见</span>
+    </h2>
+    <div class="feed" id="feed"></div>
+  </section>
+
+  <!-- ⑤ 员工登记表单 -->
+  <section id="regSection" hidden>
+    <h2><span class="sec-idx mono">04</span>节前加班登记（每人仅登记本人内容，数据互不可见）</h2>
+    <form class="reg-form" id="regForm" onsubmit="return doRegister(event)">
+      <label>加班日期
+        <input type="date" id="fDate" value="2026-05-01" required>
+      </label>
+      <label>类型
+        <select id="fType"><option value="节假日">节假日（3 倍）</option><option value="休息日">休息日（2 倍）</option></select>
+      </label>
+      <label>方式
+        <select id="fMode"><option value="offline">线下</option><option value="online">线上</option></select>
+      </label>
+      <label>预估时长(h)
+        <input type="number" id="fHours" min="0.5" max="24" step="0.5" value="4" style="width:110px" required>
+      </label>
+      <label class="wide">加班事由 / 关联项目
+        <input type="text" id="fReason" placeholder="例：五一 campaign 落地页上线保障" required>
+      </label>
+      <button class="btn primary" type="submit">提交登记</button>
+    </form>
+  </section>
+
+  <!-- ⑥ 状态看板 -->
+  <section>
+    <h2>
+      <span class="sec-idx mono">05</span>分阶段状态看板
+      <span class="spacer"></span>
+      <button class="btn blue mini" id="bulkBtn" hidden onclick="finalizeAll()">一键终审全部 AI 通过项</button>
+    </h2>
+    <div class="board" id="board"></div>
+  </section>
+
+  <!-- ⑦ 差异面板 -->
+  <section>
+    <h2>
+      <span class="sec-idx mono">06</span>预估 vs 实报 · 差异面板
+      <span class="spacer"></span>
+      <button class="btn primary mini" id="exportBtn" hidden onclick="exportCSV()">导出薪酬核算表 (CSV)</button>
+    </h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>编号</th><th>员工</th><th>部门</th><th>日期</th><th>类型</th><th>方式</th>
+            <th class="num">预估(h)</th><th class="num">实报(h)</th><th class="num">终审(h)</th>
+            <th class="num">差异率</th><th>AI / 状态</th>
+          </tr>
+        </thead>
+        <tbody id="diffBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ⑧ 规则引擎 -->
+  <section>
+    <h2><span class="sec-idx mono">07</span>规则引擎设计（流程治理底座）</h2>
+    <div class="rules">
+      <div class="rule-card">
+        <h3><span class="rc-idx">R1</span>数据字典 · 三口径分离</h3>
+        <ul>
+          <li><b>预估时长</b>：节前员工登记、负责人审批后<b>锁定</b>，不可事后篡改</li>
+          <li><b>实报时长</b>：节后报告填写，附产出说明</li>
+          <li><b>终审工时</b>：异常复核后 HR 确认，作为薪酬唯一依据</li>
+          <li class="mono">差异率 = (实报 − 预估) / 预估</li>
+        </ul>
+      </div>
+      <div class="rule-card">
+        <h3><span class="rc-idx">R2</span>异常预警 · 三级阈值</h3>
+        <ul>
+          <li><span class="c-pass">|差异| &lt; 20%</span>：<b>AI 自动通过</b>，进入待终审</li>
+          <li><span class="c-warn">20% ≤ |差异| &lt; 50%</span>：<b>标黄预警</b>，进异常池待复核</li>
+          <li><span class="c-review">|差异| ≥ 50%</span>：<b>强制复核</b>，任何角色不可绕过</li>
+          <li>复核结论：采纳实报 / 采纳预估 / 自定义工时，全程留痕</li>
+        </ul>
+      </div>
+      <div class="rule-card">
+        <h3><span class="rc-idx">R3</span>主动触达 · 分级催办 SOP</h3>
+        <ul>
+          <li><b>节前 T-2</b>：向负责人推送待审批清单</li>
+          <li><b>D+1 09:00</b>：自动提醒员工提交加班报告</li>
+          <li><b>D+2</b>：二次催办，抄送部门负责人</li>
+          <li><b>D+3</b>：超时升级至负责人 + HR，记录入异常台账</li>
+        </ul>
+      </div>
+      <div class="rule-card">
+        <h3><span class="rc-idx">R4</span>权限隔离 · 过程可追溯</h3>
+        <ul>
+          <li><b>员工</b>：仅可见 / 操作本人记录，杜绝重复登记与隐私泄露</li>
+          <li><b>负责人</b>：仅本部门数据，承担节前审批与催办协同</li>
+          <li><b>HR</b>：全量视角，异常复核 + 终审 + 导出</li>
+          <li>每次状态流转写入操作日志（谁、何时、做了什么）</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    交互演示：切换角色体验数据权限差异，或使用「自动化触发」模拟引擎主动触达。所有界面与数据均为脱敏示意。
+  </footer>
+</div>
+
+<!-- modal -->
+<div class="modal-mask" id="mask" hidden>
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<script>
+/* =========================================================
+ * 数据字典（演示用脱敏数据 · 五一周期）
+ * ======================================================= */
+const DEPT_APPROVER = { "部门1": "负责人A", "部门2": "负责人B", "部门3": "负责人C" };
+const EMP_DEPT = {
+  "员工A":"部门1","员工B":"部门1","员工F":"部门1","员工I":"部门1","员工L":"部门1",
+  "员工C":"部门2","员工D":"部门2","员工H":"部门2","员工K":"部门2",
+  "员工E":"部门3","员工G":"部门3","员工J":"部门3"
+};
+const BASE_RATE = 50; // 演示用时薪基数（元/h）
+
+let seq = 15;
+const records = [
+  mk("R001","员工A","2026-05-01","节假日","offline",8,8,8, 0.00,"finalized",["T-3 10:02 员工提交登记","T-2 14:20 负责人A 审批通过","D+1 09:10 员工提交报告","D+1 AI 核验通过 · HR 终审完成"]),
+  mk("R002","员工B","2026-05-01","节假日","online", 3,3.5,null,0.17,"ai_passed",["T-3 11:05 员工提交登记","T-2 负责人B? 负责人A 审批通过","D+1 09:40 员工提交报告","D+1 AI 核验通过（差异 +17%）"]),
+  mk("R003","员工F","2026-05-02","休息日","online", 4,null,null,null,"post_pending",["T-3 09:30 员工提交登记","T-2 15:02 负责人A 审批通过，预估时长锁定"]),
+  mk("R004","员工I","2026-05-02","休息日","offline",6,null,null,null,"post_pending",["T-3 16:10 员工提交登记","T-2 15:10 负责人A 审批通过，预估时长锁定"]),
+  mk("R005","员工L","2026-05-01","节假日","online", 4,null,null,null,"pre_pending",["T-3 17:22 员工提交登记，等待负责人审批"]),
+  mk("R006","员工C","2026-05-01","节假日","offline",6,3,null,-0.50,"exception",["T-3 员工提交登记","T-2 负责人B 审批通过","D+1 员工提交报告","D+1 AI 判定差异 -50%，强制复核"]),
+  mk("R007","员工D","2026-05-01","节假日","online", 4,4.8,null,0.20,"exception",["T-3 员工提交登记","T-2 负责人B 审批通过","D+1 员工提交报告","D+1 AI 判定差异 +20%，进入预警"]),
+  mk("R008","员工H","2026-05-02","休息日","online", 4,4.2,null,0.05,"ai_passed",["T-2 负责人B 审批通过","D+1 员工提交报告","D+1 AI 核验通过（差异 +5%）"]),
+  mk("R009","员工K","2026-05-01","节假日","offline",7,7.5,7.5,0.07,"finalized",["T-2 负责人B 审批通过","D+1 员工提交报告","D+1 AI 核验通过 · HR 终审完成"]),
+  mk("R010","员工E","2026-05-01","节假日","offline",8,8,8,0.00,"finalized",["T-2 负责人C 审批通过","D+1 员工提交报告","D+1 AI 核验通过 · HR 终审完成"]),
+  mk("R011","员工G","2026-05-02","休息日","offline",5,1.5,null,-0.70,"exception",["T-2 负责人C 审批通过","D+1 员工提交报告","D+1 AI 判定差异 -70%，强制复核"]),
+  mk("R012","员工J","2026-05-01","节假日","online", 3,null,null,null,"pre_pending",["T-3 14:00 员工提交登记，等待负责人审批"]),
+  mk("R013","员工B","2026-05-02","休息日","offline",5,null,null,null,"post_pending",["T-3 员工提交登记","T-2 负责人A 审批通过，预估时长锁定"]),
+  mk("R014","员工F","2026-05-01","节假日","online", 6,null,null,null,"rejected",["T-3 员工提交登记","T-2 负责人A 驳回：请补充关联项目名称与具体加班事由"])
+];
+
+function mk(id, emp, date, type, mode, est, act, fin, diff, state, log) {
+  return {
+    id, emp, dept: EMP_DEPT[emp], approver: DEPT_APPROVER[EMP_DEPT[emp]],
+    date, type, mode, estHours: est, actualHours: act, finalHours: fin,
+    diffRate: diff, state, log, remind: 0, overdue: false,
+    reason: "五一 campaign 相关保障", reportNote: "", aiNote: ""
+  };
+}
+
+/* 通知中心：aud 描述可见范围 */
+let notes = [];
+function note(type, text, aud) {
+  notes.unshift({ type, text, aud: aud || { roles: ["employee","manager","hr"] }, time: nowTime() });
+  if (notes.length > 60) notes.pop();
+}
+function nowTime() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0") + ":" + String(d.getSeconds()).padStart(2,"0");
+}
+note("sys", "工作流引擎已启动：五一假勤周期已装载 14 条记录，状态机与催办规则生效");
+note("sys", "数据口径同步完成：预估 / 实报 / 终审三口径分离，差异率 = (实报−预估)/预估");
+
+/* =========================================================
+ * 角色与数据权限
+ * ======================================================= */
+let role = "employee";
+let currentEmp = "员工F";
+let currentMgr = "负责人A";
+
+function scopedRecords() {
+  if (role === "employee") return records.filter(r => r.emp === currentEmp);
+  if (role === "manager") return records.filter(r => r.approver === currentMgr);
+  return records;
+}
+function canSeeNote(n) {
+  if (!n.aud.roles.includes(role)) return false;
+  if (role === "employee" && n.aud.emp && n.aud.emp !== currentEmp) return false;
+  if (role === "manager" && n.aud.mgr && n.aud.mgr !== currentMgr) return false;
+  return true;
+}
+
+/* =========================================================
+ * AI 核验引擎
+ * ======================================================= */
+function levelOf(r) {
+  if (r.diffRate === null || r.diffRate === undefined) return "pending";
+  const a = Math.abs(r.diffRate);
+  if (a >= 0.5) return "review";
+  if (a >= 0.2) return "warn";
+  return "pass";
+}
+function aiCheck(r) {
+  r.diffRate = (r.actualHours - r.estHours) / r.estHours;
+  const lv = levelOf(r);
+  if (lv === "pass") {
+    r.state = "ai_passed";
+    r.aiNote = "AI 自动通过";
+    pushLog(r, "AI 核验通过（差异 " + fmtPct(r.diffRate) + "），等待 HR 终审");
+    note("ai", "AI 核验通过：" + r.emp + " " + r.date + " 加班，差异 " + fmtPct(r.diffRate) + "，进入待终审", { roles: ["hr"] });
+    note("ai", "你的 " + r.date + " 加班报告已通过 AI 核验，等待 HR 终审", { roles: ["employee"], emp: r.emp });
+  } else if (lv === "warn") {
+    r.state = "exception";
+    r.aiNote = "差异 20%–50%，预警待复核";
+    pushLog(r, "AI 判定差异 " + fmtPct(r.diffRate) + "，标黄进入异常预警池");
+    note("ai", "异常预警：" + r.emp + " 预估 " + r.estHours + "h / 实报 " + r.actualHours + "h，差异 " + fmtPct(r.diffRate) + "，已入预警池", { roles: ["hr","manager"], mgr: r.approver });
+    note("hr", "你的 " + r.date + " 加班报告差异 " + fmtPct(r.diffRate) + "，需 HR 复核后终审", { roles: ["employee"], emp: r.emp });
+  } else {
+    r.state = "exception";
+    r.aiNote = "差异 ≥50%，强制复核";
+    pushLog(r, "AI 判定差异 " + fmtPct(r.diffRate) + "，强制复核（不可绕过）");
+    note("ai", "强制复核：" + r.emp + " 预估 " + r.estHours + "h / 实报 " + r.actualHours + "h，差异 " + fmtPct(r.diffRate) + "，已锁入异常池", { roles: ["hr","manager"], mgr: r.approver });
+    note("hr", "你的 " + r.date + " 加班报告差异达 " + fmtPct(r.diffRate) + "，触发强制复核，请关注 HR 沟通", { roles: ["employee"], emp: r.emp });
+  }
+}
+function pushLog(r, text) { r.log.push(nowTime() + " " + text); }
+
+/* =========================================================
+ * 角色动作（状态机流转）
+ * ======================================================= */
+function doRegister(e) {
+  e.preventDefault();
+  const r = {
+    id: "R" + String(seq++).padStart(3, "0"),
+    emp: currentEmp, dept: EMP_DEPT[currentEmp], approver: DEPT_APPROVER[EMP_DEPT[currentEmp]],
+    date: $("fDate").value, type: $("fType").value, mode: $("fMode").value,
+    estHours: parseFloat($("fHours").value), actualHours: null, finalHours: null,
+    diffRate: null, state: "pre_pending", log: [], remind: 0, overdue: false,
+    reason: $("fReason").value, reportNote: "", aiNote: ""
+  };
+  pushLog(r, "员工提交加班登记，自动推送审批");
+  records.unshift(r);
+  note("approve", "审批提醒：" + currentEmp + " 提交了 " + r.date + " " + r.type + " 加班 " + r.estHours + "h（" + r.reason + "），请审批", { roles: ["manager"], mgr: r.approver });
+  note("sys", "登记成功：编号 " + r.id + "，已自动推送 " + r.approver + " 审批", { roles: ["employee"], emp: currentEmp });
+  $("regForm").reset(); $("fDate").value = "2026-05-01"; $("fHours").value = 4;
+  render();
+  return false;
+}
+
+function doApprove(id) {
+  const r = byId(id);
+  r.state = "post_pending";
+  pushLog(r, currentMgr + " 审批通过，预估时长锁定，等待节后报告");
+  note("approve", "你的 " + r.date + " 加班登记已审批通过，预估 " + r.estHours + "h 已锁定", { roles: ["employee"], emp: r.emp });
+  note("sys", "已审批通过 " + r.emp + " 的登记（编号 " + id + "）", { roles: ["manager"], mgr: currentMgr });
+  render();
+}
+
+function openReject(id) {
+  showModal(
+    t("驳回登记 · " + id) +
+    sub(byId(id).emp + " · " + byId(id).date + " · 预估 " + byId(id).estHours + "h") +
+    '<label>驳回原因（将通知员工修改重提）<textarea id="mReason" rows="3" placeholder="例：请补充关联项目名称"></textarea></label>' +
+    actions('<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn danger" onclick="doReject(\'' + id + '\')">确认驳回</button>')
+  );
+}
+function doReject(id) {
+  const r = byId(id), reason = $("mReason").value.trim() || "信息不完整，请修改后重新提交";
+  r.state = "rejected";
+  pushLog(r, currentMgr + " 驳回：" + reason);
+  note("hr", "你的 " + r.date + " 加班登记被驳回：" + reason + "，请修改后重新提交", { roles: ["employee"], emp: r.emp });
+  closeModal(); render();
+}
+
+function openResubmit(id) {
+  const r = byId(id);
+  showModal(
+    t("修改并重新提交 · " + id) +
+    sub(r.date + " " + r.type + " · 原预估 " + r.estHours + "h") +
+    '<label>修正后预估时长(h)<input id="mEst" type="number" min="0.5" max="24" step="0.5" value="' + r.estHours + '"></label>' +
+    '<label>补充说明<textarea id="mNote" rows="3">已补充关联项目：五一 campaign 落地页保障</textarea></label>' +
+    actions('<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn primary" onclick="doResubmit(\'' + id + '\')">重新提交审批</button>')
+  );
+}
+function doResubmit(id) {
+  const r = byId(id);
+  const v = parseFloat($("mEst").value);
+  if (!(v > 0)) return;
+  r.estHours = v; r.state = "pre_pending";
+  pushLog(r, "员工修改后重新提交，再次推送负责人审批");
+  note("approve", "审批提醒：" + r.emp + " 修改后重新提交了 " + r.date + " 加班登记 " + v + "h，请审批", { roles: ["manager"], mgr: r.approver });
+  closeModal(); render();
+}
+
+function openReport(id) {
+  const r = byId(id);
+  showModal(
+    t("节后加班报告 · " + id) +
+    sub(r.emp + " · " + r.date + " " + r.type + " · 节前锁定预估 <b>" + r.estHours + "h</b>") +
+    '<label>实际加班时长(h)<input id="mAct" type="number" min="0.5" max="24" step="0.5" value="' + r.estHours + '"></label>' +
+    '<label>工作产出说明<textarea id="mReport" rows="3" placeholder="例：完成活动落地页上线、监控值守与数据复盘"></textarea></label>' +
+    actions('<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn primary" onclick="doReport(\'' + id + '\')">提交并启动 AI 核验</button>')
+  );
+}
+function doReport(id) {
+  const r = byId(id);
+  const v = parseFloat($("mAct").value);
+  if (!(v > 0)) { alert("请填写有效的实际时长"); return; }
+  r.actualHours = v;
+  r.reportNote = $("mReport").value.trim();
+  pushLog(r, "员工提交节后报告：实报 " + v + "h，启动 AI 核验");
+  closeModal();
+  aiCheck(r);
+  render();
+}
+
+function openResolve(id) {
+  const r = byId(id);
+  showModal(
+    t("异常人工复核 · " + id) +
+    sub(r.emp + " · " + r.dept + " · 预估 " + r.estHours + "h / 实报 " + r.actualHours + "h · 差异 <b class='" + (levelOf(r) === "review" ? "c-review" : "c-warn") + "'>" + fmtPct(r.diffRate) + "</b>") +
+    '<div class="radio-row">' +
+      '<label><input type="radio" name="mDec" value="actual" checked>采纳实报（' + r.actualHours + 'h）</label>' +
+      '<label><input type="radio" name="mDec" value="est">采纳预估（' + r.estHours + 'h）</label>' +
+      '<label><input type="radio" name="mDec" value="custom">自定义</label>' +
+    '</div>' +
+    '<label>终审工时(h)<input id="mFinal" type="number" min="0.5" max="24" step="0.5" value="' + r.actualHours + '"></label>' +
+    '<label>复核说明（留痕）<textarea id="mRev" rows="2" placeholder="例：与员工及负责人核对产出后确认"></textarea></label>' +
+    actions('<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn primary" onclick="doResolve(\'' + id + '\')">确认复核结论</button>')
+  );
+  document.querySelectorAll("input[name=mDec]").forEach(radio => radio.addEventListener("change", () => {
+    const d = document.querySelector("input[name=mDec]:checked").value;
+    $("mFinal").value = d === "actual" ? r.actualHours : d === "est" ? r.estHours : $("mFinal").value;
+  }));
+}
+function doResolve(id) {
+  const r = byId(id);
+  const v = parseFloat($("mFinal").value);
+  if (!(v > 0)) { alert("请填写有效的终审工时"); return; }
+  const dec = document.querySelector("input[name=mDec]:checked").value;
+  const decText = { actual: "采纳实报", est: "采纳预估", custom: "自定义工时" }[dec];
+  r.finalHours = v;
+  r.state = "ai_passed";
+  r.aiNote = "人工复核完成（" + decText + " " + v + "h）";
+  pushLog(r, "HR 人工复核：" + decText + "，终审工时 " + v + "h。" + ($("mRev").value.trim() || ""));
+  note("hr", "复核完成：" + r.emp + " " + r.date + " 加班，" + decText + "，终审工时 " + v + "h，已转 HR 终审", { roles: ["hr"] });
+  note("hr", "你的 " + r.date + " 加班异常已复核，确认工时 " + v + "h，进入终审", { roles: ["employee"], emp: r.emp });
+  note("sys", r.emp + " 的异常记录 " + id + " 复核完成", { roles: ["manager"], mgr: r.approver });
+  closeModal(); render();
+}
+
+function doFinalize(id) {
+  const r = byId(id);
+  r.finalHours = r.finalHours ?? r.actualHours ?? r.estHours;
+  r.state = "finalized";
+  pushLog(r, "HR 终审通过，终审工时 " + r.finalHours + "h，进入薪酬核算表");
+  note("hr", "终审完成：" + r.emp + " " + r.date + " " + r.type + " " + r.finalHours + "h，已计入薪酬核算表", { roles: ["hr"] });
+  note("sys", "你的 " + r.date + " 加班已完成 HR 终审，终审工时 " + r.finalHours + "h", { roles: ["employee"], emp: r.emp });
+  render();
+}
+function finalizeAll() {
+  const list = records.filter(r => r.state === "ai_passed");
+  if (!list.length) return;
+  list.forEach(doFinalize);
+}
+
+/* =========================================================
+ * 自动化：分级催办
+ * ======================================================= */
+function simPreRemind() {
+  const list = records.filter(r => r.state === "pre_pending");
+  if (!list.length) { note("sys", "T-2 催办巡检：当前无待审批记录", { roles: ["manager","hr"] }); render(); return; }
+  const byMgr = {};
+  list.forEach(r => { (byMgr[r.approver] = byMgr[r.approver] || []).push(r); });
+  Object.keys(byMgr).forEach(m => {
+    const emps = byMgr[m].map(r => r.emp + "(" + r.estHours + "h)").join("、");
+    note("remind", "【节前 T-2】审批催办：你有 " + byMgr[m].length + " 条加班登记待审批 — " + emps + "，请于今日 18:00 前完成", { roles: ["manager"], mgr: m });
+  });
+  note("remind", "【节前 T-2】系统已向各部门负责人推送待审批清单，共 " + list.length + " 条", { roles: ["hr"] });
+  render();
+}
+function simReportRemind(round) {
+  const list = records.filter(r => r.state === "post_pending");
+  if (!list.length) { note("sys", "本轮催办巡检：当前无待报告记录", { roles: ["employee","manager","hr"] }); render(); return; }
+  list.forEach(r => {
+    r.remind = round;
+    if (round === 1) {
+      note("remind", "【节后 D+1 09:00】报告提醒：你 " + r.date + " 的" + r.type + "加班（预估 " + r.estHours + "h）尚未提交报告，请于今日 18:00 前完成", { roles: ["employee"], emp: r.emp });
+    } else if (round === 2) {
+      r.overdue = true;
+      note("remind", "【D+2 09:00】二次催办：你的加班报告仍未提交（已抄送 " + r.approver + "），请尽快处理", { roles: ["employee"], emp: r.emp });
+      note("remind", "【D+2 抄送】下属 " + r.emp + " " + r.date + " 的加班报告仍未提交，请协助督促", { roles: ["manager"], mgr: r.approver });
+    } else {
+      r.overdue = true;
+      note("hr", "【D+3 超时升级】" + r.emp + " 的加班报告已超时 48h 未提交，升级处理并记入异常台账", { roles: ["manager","hr"], mgr: r.approver });
+      note("hr", "【D+3 最后通知】你的加班报告已超时，系统已升级至 " + r.approver + " 与 HR，请立即提交", { roles: ["employee"], emp: r.emp });
+    }
+  });
+  if (round === 1) note("remind", "【节后 D+1】已向 " + list.length + " 位员工自动推送报告填写提醒", { roles: ["hr","manager"] });
+  if (round === 2) note("remind", "【D+2】二次催办完成，" + list.length + " 条记录标记超时并抄送负责人", { roles: ["hr"] });
+  if (round === 3) note("hr", "【D+3】" + list.length + " 条超时记录已升级至负责人 + HR", { roles: ["hr"] });
+  render();
+}
+
+/* =========================================================
+ * 导出薪酬核算表
+ * ======================================================= */
+function exportCSV() {
+  const done = records.filter(r => r.state === "finalized");
+  if (!done.length) { alert("暂无终审完成的记录，无法导出"); return; }
+  const head = ["记录编号","员工","部门","加班日期","类型","办公方式","终审工时(h)","工资倍率","核算加班费(元,示意)"];
+  let total = 0;
+  const rows = done.map(r => {
+    const mult = r.type === "节假日" ? 3 : 2;
+    const amount = Math.round(r.finalHours * BASE_RATE * mult);
+    total += amount;
+    return [r.id, r.emp, r.dept, r.date, r.type, r.mode === "online" ? "线上" : "线下", r.finalHours, mult + "x", amount];
+  });
+  rows.push(["合计","","","","","","","",total]);
+  const csv = "\uFEFF" + [head, ...rows].map(a => a.join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "五一加班薪酬核算表_HR终审.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  note("hr", "薪酬核算表已导出：" + done.length + " 条终审记录，合计加班费（示意）¥" + total, { roles: ["hr"] });
+  render();
+}
+
+/* =========================================================
+ * 渲染
+ * ======================================================= */
+const $ = id => document.getElementById(id);
+const byId = id => records.find(r => r.id === id);
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
+function fmtPct(v) {
+  if (v === null || v === undefined) return "—";
+  return (v > 0 ? "+" : "") + (v * 100).toFixed(1) + "%";
+}
+function multOf(r) { return r.type === "节假日" ? 3 : 2; }
+
+const COLS = [
+  { k: "pre_pending", t: "节前待审批" },
+  { k: "rejected",    t: "已驳回·待修改" },
+  { k: "post_pending",t: "节后待报告" },
+  { k: "ai_passed",   t: "AI通过·待终审" },
+  { k: "exception",   t: "异常预警池" },
+  { k: "finalized",   t: "HR已终审" }
+];
+const ST = {
+  pre_pending: ["待审批","st-pending"], rejected: ["已驳回","st-reject"],
+  post_pending: ["待报告","st-wait"], ai_passed: ["待终审","st-pass"],
+  exception: ["异常","st-err"], finalized: ["已终审","st-done"]
+};
+
+function cardActions(r) {
+  if (role === "employee" && r.emp === currentEmp) {
+    if (r.state === "rejected") return '<button class="btn warn mini" onclick="openResubmit(\'' + r.id + '\')">修改重提</button>';
+    if (r.state === "post_pending") return '<button class="btn primary mini" onclick="openReport(\'' + r.id + '\')">填写节后报告</button>';
+    if (r.state === "pre_pending") return '<span class="wait-tag">等待 ' + esc(r.approver) + ' 审批…</span>';
+  }
+  if (role === "manager" && r.approver === currentMgr) {
+    if (r.state === "pre_pending")
+      return '<button class="btn primary mini" onclick="doApprove(\'' + r.id + '\')">通过</button>' +
+             '<button class="btn danger mini" onclick="openReject(\'' + r.id + '\')">驳回</button>';
+    if (r.state === "exception") return '<span class="wait-tag">已推送 HR 复核</span>';
+  }
+  if (role === "hr") {
+    if (r.state === "exception") return '<button class="btn danger mini" onclick="openResolve(\'' + r.id + '\')">人工复核</button>';
+    if (r.state === "ai_passed") return '<button class="btn blue mini" onclick="doFinalize(\'' + r.id + '\')">终审</button>';
+  }
+  return "";
+}
+
+function render() {
+  // 指标（全局）
+  $("mTotal").textContent = records.length;
+  $("mPre").textContent = records.filter(r => r.state === "pre_pending").length;
+  $("mPost").textContent = records.filter(r => r.state === "post_pending").length;
+  $("mExc").textContent = records.filter(r => r.state === "exception").length;
+  $("mDone").textContent = records.filter(r => r.state === "finalized").length;
+
+  // 权限相关 UI
+  $("regSection").hidden = role !== "employee";
+  $("bulkBtn").hidden = !(role === "hr" && records.some(r => r.state === "ai_passed"));
+  $("exportBtn").hidden = role !== "hr";
+  $("empSel").hidden = role !== "employee";
+  $("mgrSel").hidden = role !== "manager";
+  $("scopeNote").innerHTML =
+    role === "employee" ? '数据权限：以 <b>' + currentEmp + '</b> 身份登录，仅可见本人记录' :
+    role === "manager"  ? '数据权限：以 <b>' + currentMgr + '</b> 身份登录，仅可见本部门待办与记录' :
+                          '数据权限：<b>HR 全量视角</b>，可复核异常、终审并导出薪酬核算表';
+
+  // 看板（按角色数据权限）
+  const view = scopedRecords();
+  $("board").innerHTML = COLS.map(col => {
+    const list = view.filter(r => r.state === col.k);
+    const cards = list.map(r => {
+      const lv = levelOf(r);
+      const lvCls = lv === "review" ? "lv-review" : lv === "warn" ? "lv-warn" : "";
+      const diffLine = r.diffRate !== null && r.diffRate !== undefined
+        ? '<div class="card-line mono">实报 ' + r.actualHours + 'h · 差异 <span class="' +
+          (lv === "review" ? "c-review" : lv === "warn" ? "c-warn" : "c-pass") + '">' + fmtPct(r.diffRate) +
+          (lv === "review" ? ' · <span class="urgent-tag">强制复核</span>' : "") + '</span></div>'
+        : "";
+      const finalLine = r.finalHours !== null
+        ? '<div class="card-line mono">终审工时 <b>' + r.finalHours + 'h</b> · ' + multOf(r) + 'x</div>' : "";
+      const aiLine = r.state === "exception" ? '<div class="card-line" style="color:var(--err)">' + esc(r.aiNote) + '</div>'
+                  : r.state === "ai_passed" && r.aiNote ? '<div class="card-line" style="color:var(--violet)">' + esc(r.aiNote) + '</div>' : "";
+      const remindTag = r.remind >= 3 ? '<span class="urgent-tag">已超时升级</span>'
+                      : r.remind === 2 ? '<span class="urgent-tag" style="color:var(--warn);background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.35)">已催办 2 次</span>'
+                      : r.remind === 1 ? '<span class="chip offline">已催办</span>' : "";
+      const acts = cardActions(r);
+      return '<div class="emp-card ' + lvCls + ' ' + (r.state === "finalized" ? "is-done" : "") + '">' +
+        '<div class="card-top"><span class="emp">' + esc(r.emp) + '</span><span class="rid mono">' + r.id + '</span>' +
+        '<span style="margin-left:auto"></span>' + remindTag +
+        '<span class="chip ' + r.mode + '">' + (r.mode === "online" ? "线上" : "线下") + '</span>' +
+        '<span class="chip ' + (r.type === "节假日" ? "holiday" : "weekend") + '">' + r.type + '</span></div>' +
+        '<div class="card-line mono">' + esc(r.dept) + ' · ' + r.date + ' · 审批 ' + esc(r.approver) + '</div>' +
+        '<div class="card-line mono">预估 ' + r.estHours + 'h' + (r.reason ? ' · ' + esc(r.reason) : "") + '</div>' +
+        diffLine + aiLine + finalLine +
+        (acts ? '<div class="card-actions">' + acts + '</div>' : '') +
+        '<div class="card-log">最近轨迹：' + esc(r.log[r.log.length - 1] || "—") + '</div>' +
+      '</div>';
+    }).join("");
+    return '<div class="board-col"><div class="col-head"><span class="name">' + col.t +
+      '</span><span class="count mono">' + list.length + '</span></div>' +
+      '<div class="col-cards">' + (cards || '<div class="empty">暂无记录</div>') + '</div></div>';
+  }).join("");
+
+  // 差异表
+  $("diffBody").innerHTML = view.map(r => {
+    const lv = levelOf(r);
+    const [stText, stCls] = ST[r.state];
+    const diffCls = lv === "pending" ? "c-muted" : lv === "review" ? "c-review" : lv === "warn" ? "c-warn" : "c-pass";
+    const rowCls = lv === "review" ? "row-review" : lv === "warn" ? "row-warn" : "";
+    return '<tr class="' + rowCls + '">' +
+      '<td class="mono">' + r.id + '</td>' +
+      '<td>' + esc(r.emp) + '</td><td>' + esc(r.dept) + '</td>' +
+      '<td class="mono">' + r.date + '</td>' +
+      '<td><span class="chip ' + (r.type === "节假日" ? "holiday" : "weekend") + '">' + r.type + '</span></td>' +
+      '<td><span class="chip ' + r.mode + '">' + (r.mode === "online" ? "线上" : "线下") + '</span></td>' +
+      '<td class="mono num">' + r.estHours + '</td>' +
+      '<td class="mono num">' + (r.actualHours === null ? "—" : r.actualHours) + '</td>' +
+      '<td class="mono num">' + (r.finalHours === null ? "—" : r.finalHours) + '</td>' +
+      '<td class="mono num ' + diffCls + '">' + fmtPct(r.diffRate) + '</td>' +
+      '<td><span class="st-chip ' + stCls + '">' + stText + '</span>' +
+        (r.aiNote ? ' <span class="sim-hint">' + esc(r.aiNote) + '</span>' : '') + '</td>' +
+    '</tr>';
+  }).join("");
+
+  // 通知中心（按角色 + 归属过滤）
+  const visible = notes.filter(canSeeNote);
+  const tagMap = { sys:["系统","t-sys"], approve:["审批","t-approve"], remind:["催办","t-remind"], ai:["AI","t-ai"], hr:["HR","t-hr"] };
+  $("feed").innerHTML = visible.length
+    ? visible.map(n => '<div class="feed-item"><div class="feed-time">' + n.time + '</div>' +
+        '<div class="feed-text"><span class="feed-tag ' + tagMap[n.type][1] + '">' + tagMap[n.type][0] + '</span>' + esc(n.text) + '</div></div>').join("")
+    : '<div class="feed-empty">当前角色暂无通知</div>';
+  $("feedCount").hidden = visible.length === 0;
+  $("feedCount").textContent = visible.length;
+}
+
+/* =========================================================
+ * modal 小工具
+ * ======================================================= */
+const t = s => '<div class="m-title">' + s + '</div>';
+const sub = s => '<div class="m-sub">' + s + '</div>';
+const actions = s => '<div class="m-actions">' + s + '</div>';
+function showModal(html) { $("modalBox").innerHTML = html; $("mask").hidden = false; }
+function closeModal() { $("mask").hidden = true; }
+$("mask").addEventListener("click", e => { if (e.target === $("mask")) closeModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+/* =========================================================
+ * 角色切换初始化
+ * ======================================================= */
+$("empSel").innerHTML = Object.keys(EMP_DEPT).map(e => '<option>' + e + '</option>').join("");
+$("empSel").value = currentEmp;
+$("mgrSel").innerHTML = ["负责人A","负责人B","负责人C"].map(m => '<option>' + m + '</option>').join("");
+$("mgrSel").value = currentMgr;
+
+$("empSel").addEventListener("change", e => { currentEmp = e.target.value; render(); });
+$("mgrSel").addEventListener("change", e => { currentMgr = e.target.value; render(); });
+$("roleSeg").addEventListener("click", e => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  role = btn.dataset.role;
+  document.querySelectorAll("#roleSeg button").forEach(b => b.classList.toggle("on", b === btn));
+  render();
+});
+
+render();
+</script>
+</body>
+</html>

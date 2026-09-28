@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>假勤统计自动化工作流 · 全流程演示</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #EFEDE8;
+    --bg-warm: #F5F0EB;
+    --card: #FAFAF7;
+    --card2: #F2EFEA;
+    --border: #D4D0C8;
+    --border-strong: #B8B2A8;
+    --accent: #C84A3E;
+    --accent-hover: #B03D32;
+    --accent-light: rgba(200,74,62,.08);
+    --pink: #E8D5D0;
+    --pink-light: #EDDCD5;
+    --ink: #1A1A1A;
+    --text: #2A2A2A;
+    --muted: #6B6B6B;
+    --faint: #999;
+    --blue: #3B6FA0;
+    --violet: #7B5EA7;
+    --warn: #C7901E;
+    --err: #C84A3E;
+    --good: #5B8C5A;
+    --serif: "Source Han Serif SC", "Noto Serif SC", "STSong", "SimSun", serif;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", system-ui, sans-serif;
+    --mono: "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px; line-height: 1.75;
+    overflow-x: hidden;
+  }
+  .mono { font-family: var(--mono); }
+  .serif { font-family: var(--serif); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 56px 28px 80px; }
+
+  /* ============ hero ============ */
+  .hero { text-align: center; max-width: 800px; margin: 0 auto; }
+  .eyebrow {
+    display: inline-block; font-size: 11px; font-family: var(--sans); letter-spacing: 3px;
+    text-transform: uppercase; color: var(--accent); border-bottom: 2px solid var(--accent);
+    padding: 0 0 4px; margin-bottom: 20px;
+  }
+  h1 { font-size: 30px; font-weight: 600; letter-spacing: 1px; line-height: 1.4; font-family: var(--serif); color: var(--ink); }
+  .hero p { margin-top: 16px; font-size: 15.5px; color: var(--muted); }
+  .hero .lead b { color: var(--ink); font-weight: 600; }
+  .hero-tags { margin-top: 22px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .htag {
+    font-size: 12px; color: var(--muted); background: transparent;
+    border: 1px solid var(--border-strong); border-radius: 2px; padding: 5px 14px;
+  }
+  .htag b { color: var(--accent); font-weight: 600; font-family: var(--mono); }
+
+  /* decorative pink block (homage to the reference image) */
+  .hero-deco {
+    width: 64px; height: 64px; background: var(--pink);
+    margin: 28px auto 0; border-radius: 2px;
+  }
+
+  section { margin-top: 72px; }
+  .sec-head { margin-bottom: 28px; }
+  .sec-kicker { font-size: 11px; font-family: var(--sans); letter-spacing: 3px; text-transform: uppercase; color: var(--accent); }
+  h2 { font-size: 22px; font-weight: 600; margin-top: 8px; font-family: var(--serif); color: var(--ink); letter-spacing: .5px; }
+  .sec-sub { margin-top: 10px; color: var(--muted); font-size: 14.5px; }
+  .sec-sub b { color: var(--ink); font-weight: 600; }
+
+  /* ============ player ============ */
+  .player {
+    background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+    overflow: hidden;
+  }
+  .progress { height: 3px; background: var(--border); }
+  .progress-bar { height: 100%; width: 0; background: var(--accent); transition: width .4s ease; }
+
+  .stage-grid { display: grid; grid-template-columns: 320px 1fr; }
+
+  /* stepper */
+  .stepper { border-right: 1px solid var(--border); padding: 24px 0; position: relative; background: var(--bg-warm); }
+  .phase-row { padding: 4px 26px 8px; font-size: 10px; font-family: var(--sans); letter-spacing: 2px; text-transform: uppercase; }
+  .phase-pre { color: var(--blue); }
+  .phase-post { color: var(--violet); }
+  .step {
+    display: grid; grid-template-columns: 30px 1fr; gap: 0; padding: 0 22px; cursor: pointer;
+    position: relative;
+  }
+  .step-rail { position: relative; display: flex; justify-content: center; }
+  .step-rail::before { content: ""; position: absolute; top: 0; bottom: -4px; width: 1px; background: var(--border); }
+  .phase-row + .step .step-rail::before { top: 0; }
+  .step:last-child .step-rail::before { bottom: 50%; }
+  .dot {
+    position: relative; z-index: 1; margin-top: 5px;
+    width: 11px; height: 11px; border-radius: 50%; background: var(--card);
+    border: 2px solid var(--border-strong); transition: all .25s;
+  }
+  .step.done .dot { border-color: var(--accent); background: var(--accent); }
+  .step.active .dot { border-color: var(--ink); background: var(--ink); box-shadow: 0 0 0 3px rgba(26,26,26,.1); transform: scale(1.1); }
+  .step-body { padding: 0 0 18px 6px; }
+  .step-time { font-size: 10px; color: var(--faint); font-family: var(--mono); }
+  .step-title { font-size: 13px; font-weight: 500; color: var(--faint); transition: color .2s; }
+  .step.done .step-title { color: var(--muted); }
+  .step.active .step-title { color: var(--ink); font-weight: 600; }
+
+  .actor-pill {
+    font-size: 9.5px; font-family: var(--mono); border-radius: 3px;
+    padding: 1px 6px; margin-left: 6px; vertical-align: 1px; white-space: nowrap;
+  }
+  .a-employee { color: var(--good); background: rgba(91,140,90,.1); }
+  .a-system   { color: var(--blue); background: rgba(59,111,160,.1); }
+  .a-manager  { color: var(--violet); background: rgba(123,94,167,.1); }
+  .a-ai       { color: var(--accent); background: rgba(200,74,62,.1); }
+  .a-hr       { color: #B8762E; background: rgba(184,118,46,.1); }
+
+  /* stage */
+  .stage { padding: 30px 36px 28px; display: flex; flex-direction: column; gap: 22px; min-height: 580px; background: var(--card); }
+  .stage-top { display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+  .stage-title { font-size: 20px; font-weight: 600; font-family: var(--serif); color: var(--ink); }
+  .stage-time { font-size: 12px; color: var(--faint); font-family: var(--mono); margin-top: 3px; }
+  .stage-desc { color: var(--muted); font-size: 14.5px; max-width: 640px; line-height: 1.8; }
+  .stage-desc b { color: var(--ink); font-weight: 600; }
+  .stage-desc .hl { color: var(--accent); font-weight: 600; }
+  .stage-desc .hl-r { color: var(--err); font-weight: 600; }
+
+  .doc-and-feed { display: grid; grid-template-columns: 1fr; gap: 18px; }
+
+  /* 单据 */
+  .doc {
+    background: var(--bg-warm); border: 1px solid var(--border); border-radius: 4px;
+    padding: 20px 24px;
+  }
+  .doc-head { display: flex; align-items: center; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .doc-icon {
+    width: 28px; height: 28px; border-radius: 4px; background: var(--pink);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .doc-id { font-size: 14px; font-weight: 600; font-family: var(--mono); color: var(--ink); }
+  .doc-sub { font-size: 11.5px; color: var(--faint); font-family: var(--mono); margin-top: 1px; }
+  .doc-status { margin-left: auto; }
+
+  .d-chip { font-size: 11px; font-family: var(--mono); border-radius: 3px; padding: 3px 10px; white-space: nowrap; }
+  .d-pending  { color: var(--muted); background: transparent; border: 1px solid var(--border-strong); }
+  .d-lock     { color: var(--blue); background: rgba(59,111,160,.08); border: 1px solid rgba(59,111,160,.3); }
+  .d-wait     { color: var(--warn); background: rgba(199,144,30,.08); border: 1px solid rgba(199,144,30,.3); }
+  .d-checking { color: var(--accent); background: var(--accent-light); border: 1px solid rgba(200,74,62,.3); }
+  .d-err      { color: var(--err); background: rgba(200,74,62,.08); border: 1px solid rgba(200,74,62,.35); }
+  .d-reviewed { color: var(--good); background: rgba(91,140,90,.08); border: 1px solid rgba(91,140,90,.3); }
+  .d-done     { color: var(--blue); background: rgba(59,111,160,.08); border: 1px solid rgba(59,111,160,.3); }
+
+  .doc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 28px; }
+  .field { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .field .k { color: var(--faint); font-size: 12px; min-width: 80px; }
+  .field .v { color: var(--ink); font-weight: 500; margin-left: 4px; }
+  .field .v.muted { color: var(--faint); font-weight: 400; }
+  .field .v.good { color: var(--good); }
+  .field .v.bad { color: var(--err); }
+  .field .v.ai-c { color: var(--accent); }
+  .lock-tag {
+    font-size: 9px; font-family: var(--mono); color: var(--blue);
+    border: 1px solid rgba(59,111,160,.35); border-radius: 2px; padding: 0 4px;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .new-tag {
+    font-size: 9px; font-family: var(--mono); color: var(--accent);
+    border: 1px solid rgba(200,74,62,.35); border-radius: 2px; padding: 0 4px;
+  }
+  .field.coming .v { color: var(--faint); font-weight: 400; }
+
+  .doc-verdict {
+    margin-top: 14px; border-radius: 3px; padding: 10px 14px; font-size: 13px;
+    display: none; align-items: flex-start; gap: 8px;
+  }
+  .doc-verdict.show { display: flex; }
+  .verdict-err { background: rgba(200,74,62,.06); border: 1px solid rgba(200,74,62,.25); color: var(--err); border-left: 3px solid var(--err); }
+  .verdict-ok { background: rgba(91,140,90,.06); border: 1px solid rgba(91,140,90,.25); color: var(--good); border-left: 3px solid var(--good); }
+  .doc-pay {
+    margin-top: 14px; background: rgba(59,111,160,.05); border: 1px solid rgba(59,111,160,.25); border-left: 3px solid var(--blue);
+    border-radius: 3px; padding: 12px 16px; display: none; align-items: center; gap: 12px;
+  }
+  .doc-pay.show { display: flex; }
+  .pay-formula { font-size: 12.5px; color: var(--muted); font-family: var(--mono); }
+  .pay-amount { margin-left: auto; font-size: 20px; font-weight: 700; color: var(--blue); font-family: var(--mono); }
+
+  /* 通知气泡 */
+  .feed-title { font-size: 11px; font-family: var(--sans); letter-spacing: 2px; text-transform: uppercase; color: var(--faint); margin-bottom: 12px; }
+  .bubble { display: flex; gap: 10px; margin-bottom: 10px; animation: fadeUp .35s ease; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .avatar {
+    flex: none; width: 30px; height: 30px; border-radius: 4px; font-size: 11px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; font-family: var(--mono);
+  }
+  .av-employee { background: rgba(91,140,90,.12); color: var(--good); border: 1px solid rgba(91,140,90,.25); }
+  .av-system   { background: rgba(59,111,160,.12); color: var(--blue); border: 1px solid rgba(59,111,160,.25); }
+  .av-manager  { background: rgba(123,94,167,.12); color: var(--violet); border: 1px solid rgba(123,94,167,.25); }
+  .av-ai       { background: var(--accent-light); color: var(--accent); border: 1px solid rgba(200,74,62,.25); }
+  .av-hr       { background: rgba(184,118,46,.12); color: #B8762E; border: 1px solid rgba(184,118,46,.25); }
+  .bubble-body { flex: 1; }
+  .bubble-meta { font-size: 11px; color: var(--faint); margin-bottom: 3px; }
+  .bubble-meta b { color: var(--muted); font-weight: 600; }
+  .bubble-card {
+    background: var(--bg-warm); border: 1px solid var(--border); border-radius: 2px 8px 8px 8px;
+    padding: 9px 13px; font-size: 13px; color: var(--text);
+  }
+  .bubble-card .auto-tag {
+    display: inline-block; font-size: 9px; font-family: var(--mono); color: var(--blue);
+    background: rgba(59,111,160,.08); border-radius: 2px; padding: 0 5px; margin-right: 6px;
+  }
+  .feed-empty { font-size: 12.5px; color: var(--faint); border: 1px dashed var(--border); border-radius: 4px; padding: 16px; text-align: center; }
+
+  /* controls */
+  .controls {
+    border-top: 1px solid var(--border); padding: 16px 30px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--bg-warm);
+  }
+  .ctrl-hint { font-size: 11.5px; color: var(--faint); }
+  .ctrl-hint kbd {
+    font-family: var(--mono); font-size: 10px; border: 1px solid var(--border-strong);
+    border-radius: 2px; padding: 0 4px; color: var(--muted);
+  }
+  .cbtn {
+    background: transparent; border: 1px solid var(--border-strong); color: var(--text);
+    border-radius: 3px; padding: 8px 18px; font-size: 13px; cursor: pointer; font-family: var(--sans);
+    transition: all .2s;
+  }
+  .cbtn:hover { border-color: var(--ink); color: var(--ink); }
+  .cbtn:disabled { opacity: .3; cursor: not-allowed; }
+  .cbtn.play { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; padding: 8px 24px; }
+  .cbtn.play:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .ctrl-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+  .counter { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+  /* ============ AI 三分支 ============ */
+  .ai-wrap { display: grid; gap: 20px; }
+  .scale {
+    background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 24px 28px 20px;
+  }
+  .scale-title { font-size: 13.5px; font-weight: 600; margin-bottom: 18px; color: var(--ink); font-family: var(--serif); }
+  .scale-bar { position: relative; height: 12px; border-radius: 2px; overflow: hidden; display: flex; margin: 0 6px; }
+  .seg-r { flex: 50; background: rgba(200,74,62,.4); }
+  .seg-y { flex: 30; background: rgba(199,144,30,.4); }
+  .seg-g { flex: 40; background: rgba(91,140,90,.4); }
+  .seg-y2 { flex: 30; background: rgba(199,144,30,.4); }
+  .seg-r2 { flex: 50; background: rgba(200,74,62,.4); }
+  .scale-labels { position: relative; margin: 8px 6px 0; height: 18px; }
+  .sl { position: absolute; transform: translateX(-50%); font-size: 10px; color: var(--faint); font-family: var(--mono); }
+  .scale-zones { display: grid; grid-template-columns: 50% 30% 40%; margin: 16px 6px 0; gap: 0; }
+  .zone { font-size: 12px; color: var(--muted); padding-top: 10px; border-top: 2px solid; text-align: center; }
+  .zone b { display: block; font-size: 13px; margin-bottom: 3px; font-family: var(--serif); }
+  .zone.zg { border-color: var(--good); } .zone.zg b { color: var(--good); }
+  .zone.zy { border-color: var(--warn); } .zone.zy b { color: var(--warn); }
+  .zone.zr { border-color: var(--err); } .zone.zr b { color: var(--err); }
+
+  .ai-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .ai-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 20px 22px;
+    border-left: 3px solid;
+  }
+  .ai-card.g { border-left-color: var(--good); }
+  .ai-card.y { border-left-color: var(--warn); }
+  .ai-card.r { border-left-color: var(--err); }
+  .ai-case { font-size: 11px; color: var(--faint); font-family: var(--mono); }
+  .ai-nums { display: flex; align-items: baseline; gap: 8px; margin: 12px 0 4px; }
+  .ai-nums .big { font-size: 24px; font-weight: 700; font-family: var(--mono); color: var(--ink); }
+  .ai-nums .cmp { color: var(--faint); font-size: 13px; font-family: var(--mono); }
+  .ai-pct { font-size: 14px; font-weight: 600; font-family: var(--mono); margin-bottom: 10px; }
+  .ai-action { font-size: 13px; color: var(--muted); }
+  .ai-action b { font-weight: 600; color: var(--text); }
+  .g .big, .g .ai-pct { color: var(--good); }
+  .y .big, .y .ai-pct { color: var(--warn); }
+  .r .big, .r .ai-pct { color: var(--err); }
+  .ai-star { margin-top: 12px; font-size: 11px; color: var(--faint); border-top: 1px solid var(--border); padding-top: 10px; }
+
+  /* ============ before / after ============ */
+  .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .ba-col { border-radius: 4px; padding: 26px 28px; border: 1px solid; }
+  .ba-before { background: var(--card2); border-color: var(--border); }
+  .ba-after { background: rgba(91,140,90,.04); border-color: rgba(91,140,90,.25); }
+  .ba-h { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; font-family: var(--serif); }
+  .ba-before .ba-h { color: var(--muted); }
+  .ba-after .ba-h { color: var(--good); }
+  .ba-col ul { list-style: none; display: grid; gap: 12px; }
+  .ba-col li { font-size: 13.5px; color: var(--muted); padding-left: 24px; position: relative; }
+  .ba-before li::before { content: "✕"; position: absolute; left: 0; color: var(--faint); font-size: 12px; }
+  .ba-after li::before { content: "✓"; position: absolute; left: 0; color: var(--good); font-size: 13px; font-weight: 700; }
+  .ba-after li { color: var(--text); }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 24px; }
+  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 20px 18px; text-align: center; }
+  .kpi .num { font-size: 26px; font-weight: 700; color: var(--accent); font-family: var(--mono); }
+  .kpi .lbl { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .kpi .sub { font-size: 11px; color: var(--faint); margin-top: 2px; }
+
+  /* ============ 机制三件套 ============ */
+  .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .pillar { background: var(--card); border: 1px solid var(--border); border-radius: 4px; padding: 22px 24px; }
+  .pillar h3 { font-size: 15px; font-weight: 600; margin-bottom: 10px; display: flex; gap: 8px; align-items: center; font-family: var(--serif); color: var(--ink); }
+  .p-idx { font-size: 11px; font-family: var(--mono); color: var(--accent); border: 1px solid rgba(200,74,62,.3); border-radius: 2px; padding: 1px 6px; }
+  .pillar p { font-size: 13px; color: var(--muted); }
+  .pillar p b { color: var(--ink); font-weight: 600; }
+
+  footer { margin-top: 72px; padding-top: 22px; border-top: 1px solid var(--border); font-size: 12px; color: var(--faint); text-align: center; }
+
+  @media (max-width: 960px) {
+    .stage-grid { grid-template-columns: 1fr; }
+    .stepper { border-right: none; border-bottom: 1px solid var(--border); display: flex; overflow-x: auto; padding: 14px; gap: 4px; }
+    .phase-row { display: none; }
+    .step { grid-template-columns: 1fr; min-width: 120px; padding: 0 6px; }
+    .step-rail { display: none; }
+    .step-body { padding: 0; }
+    .step.active .step-title { color: var(--accent); }
+    .ai-cards, .pillars { grid-template-columns: 1fr; }
+    .ba, .kpis { grid-template-columns: 1fr 1fr; }
+    .doc-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ HERO ============ -->
+  <header class="hero">
+    <div class="eyebrow">HR WORKFLOW · 高并发流程治理</div>
+    <h1>一条加班单的 7 天旅程<br>看懂假勤统计自动化工作流</h1>
+    <p class="lead"><b>500+ 员工</b>、每周期 <b>2500+ 条</b>加班记录。用「<b>数据字典 + 状态机 + AI 辅助标注</b>」替代人肉追踪核对，让每一笔加班数据 <b style="color:var(--accent)">过程可追溯、结果零差错</b>。</p>
+    <div class="hero-tags">
+      <span class="htag">两阶段强控流程</span>
+      <span class="htag">三角色权限隔离</span>
+      <span class="htag">AI 辅助标注</span>
+      <span class="htag">异常即预警</span>
+      <span class="htag">分级催办不遗漏</span>
+      <span class="htag">错误率 <b>→ 0</b></span>
+    </div>
+    <div class="hero-deco"></div>
+  </header>
+
+  <!-- ============ 全流程示例播放器 ============ -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-kicker">FULL-FLOW EXAMPLE</div>
+      <h2>全流程示例：跟着一张真实的加班单走一遍</h2>
+      <p class="sec-sub">主角：员工 <b style="color:var(--ink)">员工F</b>，五一劳动节当天加班。点击「自动播放」，或用 <span class="mono">← →</span> 键分步讲解。</p>
+    </div>
+
+    <div class="player">
+      <div class="progress"><div class="progress-bar" id="bar"></div></div>
+      <div class="stage-grid">
+        <div class="stepper" id="stepper"></div>
+        <div class="stage">
+          <div class="stage-top">
+            <div>
+              <div class="stage-title" id="sTitle"></div>
+              <div class="stage-time" id="sTime"></div>
+            </div>
+            <span style="margin-left:auto"></span>
+          </div>
+          <div class="stage-desc" id="sDesc"></div>
+
+          <div class="doc-and-feed">
+            <div class="doc" id="doc"></div>
+            <div>
+              <div class="feed-title">系统通知记录 · 主动触达</div>
+              <div id="feed"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="cbtn" id="btnReset" title="从头开始">↺ 重置</button>
+        <button class="cbtn" id="btnPrev">← 上一步</button>
+        <button class="cbtn play" id="btnPlay">▶ 自动播放</button>
+        <button class="cbtn" id="btnNext">下一步 →</button>
+        <span class="ctrl-hint"><kbd>←</kbd> <kbd>→</kbd> 切换 · <kbd>空格</kbd> 播放/暂停</span>
+        <div class="ctrl-right">
+          <span class="counter" id="counter"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ AI 辅助标注 ============ -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-kicker">AI ANNOTATION</div>
+      <h2>AI 辅助标注：差异大的自动提醒加强审核</h2>
+      <p class="sec-sub">系统对每一条单据自动比对「预估工时 vs 实报工时」，AI 按差异率标注哪些需要加强审核，<b style="color:var(--ink)">负责人和 HR 只需要关注被标注的少数单据</b>。</p>
+    </div>
+
+    <div class="ai-wrap">
+      <div class="scale">
+        <div class="scale-title">差异率 = （实报工时 − 预估工时）/ 预估工时</div>
+        <div class="scale-bar">
+          <div class="seg-r"></div><div class="seg-y"></div><div class="seg-g"></div><div class="seg-y2"></div><div class="seg-r2"></div>
+        </div>
+        <div class="scale-labels">
+          <span class="sl" style="left:6px;transform:none">← 少报</span>
+          <span class="sl" style="left:25%">−50%</span>
+          <span class="sl" style="left:40%">−20%</span>
+          <span class="sl" style="left:50%">0</span>
+          <span class="sl" style="left:60%">+20%</span>
+          <span class="sl" style="left:75%">+50%</span>
+          <span class="sl" style="right:6px;transform:none">多报 →</span>
+        </div>
+        <div class="scale-zones">
+          <div class="zone zr"><b>≥ 50% 需加强审核</b>AI 标注后推送 HR 复核</div>
+          <div class="zone zy"><b>20%–50% 需关注</b>AI 标注后推送负责人重点核对</div>
+          <div class="zone zg"><b>&lt; 20% 正常</b>免标注，直接进入业务负责人+HR 终审队列</div>
+        </div>
+      </div>
+
+      <div class="ai-cards">
+        <div class="ai-card g">
+          <div class="ai-case">CASE 1 · 员工A · 5/1</div>
+          <div class="ai-nums"><span class="big">4h</span><span class="cmp">预估 → 实报</span><span class="big">4h</span></div>
+          <div class="ai-pct">差异 0%</div>
+          <div class="ai-action"><b>AI 标注：正常</b>：无需加强审核，直接进入 HR 终审队列，员工与 HR 各收一条结果通知。</div>
+          <div class="ai-star">占比约 90%+ · 全部秒级处理，零人工</div>
+        </div>
+        <div class="ai-card y">
+          <div class="ai-case">CASE 2 · 员工D · 5/1</div>
+          <div class="ai-nums"><span class="big">4h</span><span class="cmp">预估 → 实报</span><span class="big">5h</span></div>
+          <div class="ai-pct">差异 +25%</div>
+          <div class="ai-action"><b>AI 标注：需关注</b>：推送负责人重点核对产出说明，确认后工时生效。</div>
+          <div class="ai-star">占比约个位数% · 问题当天暴露，不留到月底</div>
+        </div>
+        <div class="ai-card r">
+          <div class="ai-case">CASE 3 · 员工F · 5/1（本单）</div>
+          <div class="ai-nums"><span class="big">4h</span><span class="cmp">预估 → 实报</span><span class="big">6h</span></div>
+          <div class="ai-pct">差异 +50%</div>
+          <div class="ai-action"><b>AI 标注：需加强审核</b>：推送负责人复审后流转 HR 复核，核对产出属实后终审 6h。</div>
+          <div class="ai-star">极少数 · 全程留痕，复核结论可追溯</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 运行机制三件套 ============ -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-kicker">HOW IT WORKS</div>
+      <h2>为什么它不会失控：三个机制底座</h2>
+    </div>
+    <div class="pillars">
+      <div class="pillar">
+        <h3><span class="p-idx">01</span>数据字典：三口径分离</h3>
+        <p><b>预估工时</b>审批后锁定不可改、<b>实报工时</b>节后填写附产出、<b>终审工时</b>是薪酬唯一依据。口径只有一套，杜绝月底扯皮。</p>
+      </div>
+      <div class="pillar">
+        <h3><span class="p-idx">02</span>状态机：流程强控</h3>
+        <p>登记→审批→报告→负责人复审→HR复核→终审，<b>每个状态只有合法动作可执行</b>，漏步骤无法流转，每条单据全程日志留痕。</p>
+      </div>
+      <div class="pillar">
+        <h3><span class="p-idx">03</span>主动触达：分级催办 SOP</h3>
+        <p>T-2 催审批、D+1 催报告、D+2 抄送负责人、D+3 超时升级 HR。<b>系统替人记住每一个截止时间</b>，再高并发也不漏单。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 价值对比 ============ -->
+  <section>
+    <div class="sec-head">
+      <div class="sec-kicker">VALUE</div>
+      <h2>重构前 vs 重构后</h2>
+      <p class="sec-sub">把 HR 从「人肉追踪核对」中解放出来，核算周期以「周」压缩到以「天」。</p>
+    </div>
+    <div class="ba">
+      <div class="ba-col ba-before">
+        <div class="ba-h">重构前 · 多维表格 + 人肉追踪</div>
+        <ul>
+          <li>员工可改历史数据，预估/实报口径混用，月底反复扯皮</li>
+          <li>谁没登记、谁没审批、谁没交报告，全靠 HR 一条条对</li>
+          <li>异常往往月底核算时才发现，举证困难、员工投诉风险高</li>
+          <li>2500+ 条记录逐条人工核对，HR 投入约 5 人天 / 周期</li>
+          <li>漏催、漏审、漏报无兜底，合规风险依赖个人责任心</li>
+        </ul>
+      </div>
+      <div class="ba-col ba-after">
+        <div class="ba-h">重构后 · 自动化工作流</div>
+        <ul>
+          <li>三口径分离、审批即锁定，数据口径唯一，事后无法篡改</li>
+          <li>状态机自动流转，500+ 人并行也不会漏任何一个环节</li>
+          <li>AI 辅助标注，差异大的当天推送负责人和 HR，当天可闭环</li>
+          <li>HR 只处理异常少数单，机械核对工作量降低约 90%</li>
+          <li>分级催办自动升级，每次流转留痕，过程 100% 可追溯</li>
+        </ul>
+      </div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="num">→ 0</div><div class="lbl">流程错误率</div><div class="sub">漏步骤 / 数据错乱</div></div>
+      <div class="kpi"><div class="num">D+2</div><div class="lbl">最快核算闭环</div><div class="sub">原周期约 2 周</div></div>
+      <div class="kpi"><div class="num">−90%</div><div class="lbl">HR 机械核对工时</div><div class="sub">精力转向异常仲裁</div></div>
+      <div class="kpi"><div class="num">100%</div><div class="lbl">过程可追溯</div><div class="sub">谁在何时做了什么</div></div>
+    </div>
+  </section>
+
+  <footer>
+    页面所有规模、人物、数据、金额均为脱敏示意
+  </footer>
+</div>
+
+<script>
+/* ================= 全流程示例数据：员工F 的一张加班单 ================= */
+const ACTORS = {
+  employee: { name: "员工", cls: "a-employee", av: "av-employee", text: "员" },
+  system:   { name: "系统自动", cls: "a-system", av: "av-system", text: "自" },
+  manager:  { name: "负责人", cls: "a-manager", av: "av-manager", text: "负" },
+  ai:       { name: "AI 标注", cls: "a-ai", av: "av-ai", text: "AI" },
+  hr:       { name: "HR", cls: "a-hr", av: "av-hr", text: "HR" }
+};
+
+/* 每一步：时间 / 角色 / 标题 / 解说 / 单据快照 / 通知气泡 */
+const STEPS = [
+  {
+    phase: "pre", time: "节前 T-3 · 周一 17:22", actor: "employee",
+    title: "员工F 提交节前加班登记",
+    desc: "每个人只填<b>自己的</b>单：日期、加班类型、线上/线下、预估工时、事由。提交瞬间，系统<b>自动路由</b>给部门负责人——不需要任何人转发，也看不到同事的内容。",
+    doc: { status: ["待审批", "d-pending"], est: { v: "4h", locked: false }, actual: null, ai: null, final: null, pay: false },
+    msgs: [
+      { from: "employee", name: "员工F", to: "工作流", text: "提交加班登记：5/1 节假日 · 线上 · 预估 4h，事由：节假日项目上线保障", auto: false },
+      { from: "system", name: "工作流引擎", to: "", text: "已按部门自动路由至 <b>负责人X</b>，单号 OT-2026-0501-07", auto: true }
+    ]
+  },
+  {
+    phase: "pre", time: "节前 T-2 · 周二 09:00", actor: "system",
+    title: "系统自动催办：审批提醒推送",
+    desc: "500+ 人同时登记，负责人不可能靠记忆处理。系统在 <b>T-2 09:00 自动汇总</b>待审批清单推送；到点未处理会自动升级，不靠 HR 催促。",
+    doc: { status: ["待审批", "d-pending"], est: { v: "4h", locked: false }, actual: null, ai: null, final: null, pay: false },
+    msgs: [
+      { from: "system", name: "工作流引擎", to: "推送给 负责人X", text: "<span class='auto-tag'>自动触发</span>【节前 T-2】你有 <b>3 条</b>加班登记待审批（员工F 等），请于今日 18:00 前完成，超时将自动升级", auto: true }
+    ]
+  },
+  {
+    phase: "pre", time: "节前 T-2 · 周二 14:20", actor: "manager",
+    title: "负责人审批通过，预估工时锁定",
+    desc: "负责人X 核对事由与人力安排后一键通过。从此<b>预估工时进入锁定态</b>：员工本人、HR 都无法事后修改，它成为节后比对的<b>唯一基线</b>。（不合规则驳回，退回员工修改重提）",
+    doc: { status: ["审批通过 · 已锁定", "d-lock"], est: { v: "4h", locked: true }, actual: null, ai: null, final: null, pay: false },
+    msgs: [
+      { from: "manager", name: "负责人X", to: "", text: "审批通过。确认 5/1 项目保障排班，预估 4h 合理", auto: false },
+      { from: "system", name: "工作流引擎", to: "推送给 员工F", text: "你的 5/1 加班登记已审批通过，<b>预估 4h 已锁定</b>。节后请记得提交加班报告", auto: true }
+    ]
+  },
+  {
+    phase: "post", time: "节后 D+1 · 09:00", actor: "system",
+    title: "节后自动触发：报告填写提醒",
+    desc: "不需要任何人记着这件事。假期结束第一天 09:00，系统<b>自动向所有应报告员工</b>推送提醒；D+2 未交则抄送负责人，D+3 直接升级 HR 并记入异常台账。",
+    doc: { status: ["待提交报告", "d-wait"], est: { v: "4h", locked: true }, actual: null, ai: null, final: null, pay: false },
+    msgs: [
+      { from: "system", name: "工作流引擎", to: "推送给 员工F", text: "<span class='auto-tag'>D+1 09:00</span>【节后报告提醒】请于今日 18:00 前提交 <b>5/1 加班报告</b>（锁定预估 4h），填写实际工时与产出", auto: true }
+    ]
+  },
+  {
+    phase: "post", time: "节后 D+1 · 09:40", actor: "employee",
+    title: "员工F 提交加班报告：实报 6h",
+    desc: "员工F 填写实际工时 <b>6h</b> 并附产出说明。提交后，系统自动比对预估与实报差异，<b>AI 标注</b>差异较大的单据提醒加强审核——不用等到批量抽查，也不用 HR 先看一遍。",
+    doc: { status: ["待负责人复审", "d-checking"], est: { v: "4h", locked: true }, actual: { v: "6h", fresh: true }, ai: { verdict: "err", text: "差异 +50%，AI 标注：需加强审核" }, final: null, pay: false },
+    msgs: [
+      { from: "employee", name: "员工F", to: "", text: "提交加班报告：实际 6h。产出：项目上线延时，完成发布与值守至 24 点", auto: false },
+      { from: "system", name: "工作流引擎", to: "", text: "已接收。差异率 <b>+50%</b>，AI 已标注为「需加强审核」，推送给负责人复审", auto: true }
+    ]
+  },
+  {
+    phase: "post", time: "节后 D+1 · 10:15", actor: "manager",
+    title: "负责人复审：核对产出，确认实报",
+    desc: "负责人X 对照产出说明核实当日上线延时情况属实，确认实报工时合理。差异较大的单据<b>自动流转至 HR 复审</b>，负责人只需确认事实、不必做最终裁决。",
+    doc: { status: ["负责人已复审 · 待HR", "d-err"], est: { v: "4h", locked: true }, actual: { v: "6h", fresh: true }, ai: { verdict: "err", text: "差异 +50%，AI 标注：需加强审核" }, final: null, pay: false },
+    msgs: [
+      { from: "manager", name: "负责人X", to: "", text: "已核实：5/1 项目上线延时属实，实报 6h 合理。差异较大，转 HR 复核确认", auto: false },
+      { from: "system", name: "工作流引擎", to: "推送给 HR", text: "负责人已复审确认。差异 +50%，单据转入 HR 复核队列", auto: true }
+    ]
+  },
+  {
+    phase: "post", time: "节后 D+2 · 11:00", actor: "hr",
+    title: "HR 复核：确认终审工时 6h",
+    desc: "HR 对照负责人复审结论与产出说明，在系统中记录复核结论：<b>采纳实报 6h</b>。结论、依据、操作人与时间<b>全程留痕</b>，日后随时可审计。",
+    doc: { status: ["复核完成 · 待终审", "d-reviewed"], est: { v: "4h", locked: true }, actual: { v: "6h", fresh: true }, ai: { verdict: "err", text: "差异 +50%，AI 标注：需加强审核" }, final: { v: "6h", how: "HR 复核：采纳实报（负责人已确认属实）" }, pay: false },
+    msgs: [
+      { from: "hr", name: "HR", to: "", text: "复核结论：经负责人X 确认，5/1 项目上线延时属实，<b>采纳实报 6h</b>", auto: false },
+      { from: "system", name: "工作流引擎", to: "", text: "复核记录已留痕（操作人 / 时间 / 结论 / 依据），单据转入 HR 终审队列", auto: true }
+    ]
+  },
+  {
+    phase: "post", time: "节后 D+2 · 11:05", actor: "hr",
+    title: "终审通过，自动计入薪酬核算表",
+    desc: "<b>终审工时 6h</b> 是薪酬核算的唯一依据：节假日加班 3 倍。终审完成即刻计入核算表、归档可追溯——<span class='hl'>D+2 即闭环</span>，不再等到月底人肉对账，加班工资核算零差错。",
+    doc: { status: ["终审完成 · 已归档", "d-done"], est: { v: "4h", locked: true }, actual: { v: "6h", fresh: true }, ai: { verdict: "err", text: "差异 +50%，AI 标注：需加强审核" }, final: { v: "6h", how: "HR 复核：采纳实报（负责人已确认属实）" }, pay: true },
+    msgs: [
+      { from: "system", name: "工作流引擎", to: "推送给 员工F", text: "你的 5/1 加班已完成 HR 终审：<b>终审工时 6h</b>，将按节假日 3 倍计入本月薪酬", auto: true },
+      { from: "system", name: "工作流引擎", to: "HR 核算表", text: "终审工时 6h 已写入薪酬核算表，单据归档，全链路日志可追溯", auto: true }
+    ]
+  }
+];
+
+/* ================= 播放器 ================= */
+let idx = 0;
+let playing = false;
+let timer = null;
+const $ = id => document.getElementById(id);
+
+function render() {
+  const s = STEPS[idx];
+  const a = ACTORS[s.actor];
+
+  // stepper
+  $("stepper").innerHTML = stepperHTML();
+
+  // 标题与解说
+  $("sTitle").textContent = s.title;
+  $("sTime").textContent = s.time + " · ";
+  $("sDesc").innerHTML = s.desc;
+  // 角色 pill 放到 time 行尾
+  const timeEl = $("sTime");
+  timeEl.innerHTML = s.time + " <span class='actor-pill " + a.cls + "'>" + a.name + "</span>";
+
+  // 单据
+  $("doc").innerHTML = docHTML(s.doc);
+
+  // 通知
+  $("feed").innerHTML = s.msgs.length
+    ? s.msgs.map(m => {
+        const ac = ACTORS[m.from];
+        return '<div class="bubble"><div class="avatar ' + ac.av + '">' + ac.text + '</div>' +
+          '<div class="bubble-body"><div class="bubble-meta"><b>' + m.name + '</b>' + (m.to ? ' → ' + m.to : "") + '</div>' +
+          '<div class="bubble-card">' + m.text + '</div></div></div>';
+      }).join("")
+    : '<div class="feed-empty">本步无通知</div>';
+
+  // 进度与控件
+  $("bar").style.width = (idx / (STEPS.length - 1) * 100) + "%";
+  $("counter").textContent = (idx + 1) + " / " + STEPS.length;
+  $("btnPrev").disabled = idx === 0;
+  $("btnNext").disabled = idx === STEPS.length - 1;
+}
+
+function stepperHTML() {
+  let html = "";
+  let lastPhase = null;
+  STEPS.forEach((s, i) => {
+    if (s.phase !== lastPhase) {
+      html += '<div class="phase-row ' + (s.phase === "pre" ? "phase-pre" : "phase-post") + '">' +
+              (s.phase === "pre" ? "节前 · 登记与审批" : "节后 · 报告 · 复审 · 终审") + "</div>";
+      lastPhase = s.phase;
+    }
+    const cls = i === idx ? "step active" : i < idx ? "step done" : "step";
+    const ac = ACTORS[s.actor];
+    html += '<div class="' + cls + '" onclick="go(' + i + ')">' +
+      '<div class="step-rail"><div class="dot"></div></div>' +
+      '<div class="step-body"><div class="step-time">' + s.time.split(" · ")[0] + (s.time.split(" · ")[2] ? " " + s.time.split(" · ")[2] : "") + '</div>' +
+      '<div class="step-title">' + s.title.replace(/员工F /, "") + '<span class="actor-pill ' + ac.cls + '">' + ac.name + "</span></div>" +
+      "</div></div>";
+  });
+  return html;
+}
+
+function lockSVG() {
+  return '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+}
+
+function docHTML(d) {
+  const estTag = d.est.locked
+    ? '<span class="lock-tag">' + lockSVG() + '已锁定</span>'
+    : '';
+  const actualField = d.actual
+    ? field("实报工时", '<span class="v bad">' + d.actual.v + "</span>", '<span class="new-tag">NEW</span>')
+    : field("实报工时", '<span class="v muted">待节后填写</span>', null, true);
+  const aiField = d.ai
+    ? field("AI 标注", '<span class="v ' + (d.ai.verdict === "err" ? "bad" : "good") + '">' + d.ai.text + "</span>")
+    : field("AI 标注", '<span class="v muted">报告提交后触发</span>', null, true);
+  const finalField = d.final
+    ? field("终审工时", '<span class="v good">' + d.final.v + "</span>", '<span class="new-tag">薪酬依据</span>')
+    : field("终审工时", '<span class="v muted">待复核 / 终审</span>', null, true);
+
+  let verdict = "";
+  if (d.ai && d.ai.verdict === "err" && !d.final) {
+    verdict = '<div class="doc-verdict show verdict-err">⚠ AI 标注：差异 +50%，需加强审核。单据已推送给负责人复审</div>';
+  } else if (d.final && !d.pay) {
+    verdict = '<div class="doc-verdict show verdict-ok">✓ ' + d.final.how + '，已转入 HR 终审队列</div>';
+  }
+
+  const pay = d.pay
+    ? '<div class="doc-pay show"><span class="pay-formula">节假日 3 倍 ｜ 6h × ¥XX/h × 3</span><span class="pay-amount">= ¥XXX</span></div>'
+    : "";
+
+  return '<div class="doc-head">' +
+      '<div class="doc-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C84A3E" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>' +
+      '<div><div class="doc-id">加班单 OT-2026-0501-07</div><div class="doc-sub">员工F · 2026-05-01 劳动节 · 线上</div></div>' +
+      '<div class="doc-status"><span class="d-chip ' + d.status[1] + '">' + d.status[0] + "</span></div>" +
+    "</div>" +
+    '<div class="doc-grid">' +
+      field("加班类型", '<span class="v">法定节假日（3 倍）</span>') +
+      field("事由", '<span class="v">节假日项目上线保障</span>') +
+      field("预估工时", '<span class="v">' + d.est.v + "</span>", estTag) +
+      '<div></div>' +
+      actualField + '<div></div>' +
+      aiField + '<div></div>' +
+      finalField + '<div></div>' +
+    "</div>" + verdict + pay;
+}
+
+function field(k, vHtml, tag, coming) {
+  return '<div class="field' + (coming ? " coming" : "") + '"><span class="k">' + k + "</span>" + vHtml + (tag || "") + "</div>";
+}
+
+/* 控制逻辑 */
+function go(i) {
+  idx = Math.max(0, Math.min(STEPS.length - 1, i));
+  render();
+}
+function next() { if (idx < STEPS.length - 1) { go(idx + 1); } else { setPlaying(false); } }
+function prev() { if (idx > 0) go(idx - 1); }
+
+function setPlaying(on) {
+  playing = on;
+  $("btnPlay").innerHTML = playing ? "⏸ 暂停播放" : "▶ 自动播放";
+  if (playing) {
+    if (idx === STEPS.length - 1) go(0);
+    timer = setInterval(() => {
+      if (idx === STEPS.length - 1) setPlaying(false);
+      else next();
+    }, 4200);
+  } else if (timer) {
+    clearInterval(timer); timer = null;
+  }
+}
+
+$("btnPrev").onclick = prev;
+$("btnNext").onclick = next;
+$("btnReset").onclick = () => { setPlaying(false); go(0); };
+$("btnPlay").onclick = () => setPlaying(!playing);
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowRight") { setPlaying(false); next(); }
+  else if (e.key === "ArrowLeft") { setPlaying(false); prev(); }
+  else if (e.key === " ") { e.preventDefault(); setPlaying(!playing); }
+});
+
+render();
+</script>
+</body>
+</html>
